@@ -7,6 +7,7 @@ Changes that affect templates or code using this library. Functions are document
 ### Changes
 
 - **Code and name columns are detected in a slightly different order.** `getCodeKey()` and `getNameKey()` (also used by `MagicArray`, `getName()` and `getCode()`) now look for columns ending `code` and `name` (eg. `lad_name`), and only use `areacd` as the name column if there's no column ending `name` or `nm`. Previously `{ areacd, lad21nm }` used `areacd` as the name.
+- **`csvParse()` removes blank rows from the end of the data**, with a console warning, instead of returning them as rows of empty cells (`null` with the default `autoType`). Blank rows elsewhere in the file are kept.
 
 ## 0.6.0
 

@@ -52,7 +52,7 @@ p The population was #{place.pop_2021.approx()} in 2021.
 csvParse(str, row = autoType)
 ```
 
-Parses a CSV string, using [autoType](#autotype) to convert each row by default. A byte-order mark at the start of the file is removed. Returns an array of [MagicObject](#magicobject) rows; wrap it in `MagicArray.from()` to use the [MagicArray](#magicarray) methods.
+Parses a CSV string, using [autoType](#autotype) to convert each row by default. A byte-order mark at the start of the file is removed. Blank rows at the end of the file (eg. `,,,` lines left by spreadsheet software) are removed with a console warning. Blank rows elsewhere are kept. Returns an array of [MagicObject](#magicobject) rows; wrap it in `MagicArray.from()` to use the [MagicArray](#magicarray) methods.
 
 ```js
 csvParse("areacd,areanm,value,tags\nE1,Foo,5,a|b")[0];

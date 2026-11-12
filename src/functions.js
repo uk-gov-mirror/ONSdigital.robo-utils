@@ -278,8 +278,29 @@ export function toData(arr, props, mode = null) {
 	}
 }
 
-// Modifed d3.csvParse to strip byte order mark (BOM) and apply robo-utils autoType by default
-export const csvParse = (str, row = autoType) => csvP(stripBOM(str), row);
+// Modifed d3.csvParse to strip byte order mark (BOM), remove blank rows from the end of the file
+// (eg. ",,," lines left by spreadsheet software) and apply robo-utils autoType by default.
+// Blank rows elsewhere are kept.
+export function csvParse(str, row = autoType) {
+	const raw = csvP(stripBOM(str));
+	let blank = 0;
+	while (raw.length && Object.values(raw[raw.length - 1]).every((v) => !v.trim())) {
+		raw.pop();
+		blank++;
+	}
+	if (blank)
+		console.warn(
+			`csvParse: removed ${blank} blank row${blank > 1 ? "s" : ""} from the end of the data`
+		);
+	if (!row) return raw;
+	const rows = [];
+	rows.columns = raw.columns;
+	raw.forEach((d, i) => {
+		const r = row(d, i, raw.columns);
+		if (r != null) rows.push(r);
+	});
+	return rows;
+}
 
 // Fetch raw CSV file and return a MagicArray
 export async function getData(url) {

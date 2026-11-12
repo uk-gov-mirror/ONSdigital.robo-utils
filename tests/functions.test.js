@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import * as robo from "../src/functions.js";
 import MagicNumber from "../src/magic-number.js";
 import MagicArray from "../src/magic-array.js";
@@ -333,6 +333,48 @@ describe("csvParse()", () => {
 
 	test("accepts a custom row function in place of autoType", () => {
 		expect(robo.csvParse(csv, (d) => d)[0].value).toBe("5");
+	});
+
+	describe("blank rows", () => {
+		let warn;
+		beforeEach(() => {
+			warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		});
+		afterEach(() => warn.mockRestore());
+
+		const head = "areacd,areanm,value\r\nE1,Hull,5\r\nE2,Leeds,7\r\n";
+
+		test("removes trailing blank rows (CRLF, whitespace, quoted empties) with a warning", () => {
+			const rows = robo.csvParse(head + ',,\r\n , ,\r\n"","",""\r\n\r\n');
+			expect(rows.map((d) => d.areanm)).toEqual(["Hull", "Leeds"]);
+			expect(rows.columns).toEqual(["areacd", "areanm", "value"]);
+			expect(warn).toHaveBeenCalledTimes(1);
+			expect(warn.mock.calls[0][0]).toMatch("removed 4 blank rows");
+		});
+
+		test("keeps blank rows that aren't at the end", () => {
+			const rows = robo.csvParse("areacd,areanm\nE1,Hull\n,\nE2,Leeds\n,\n");
+			expect(rows.map((d) => d.areanm)).toEqual(["Hull", null, "Leeds"]);
+			expect(warn.mock.calls[0][0]).toMatch("removed 1 blank row ");
+		});
+
+		test("doesn't warn when there are no blank rows", () => {
+			robo.csvParse(head);
+			expect(warn).not.toHaveBeenCalled();
+		});
+
+		test("custom row functions get the index and columns, and can skip rows", () => {
+			const calls = [];
+			const rows = robo.csvParse(head + ",,\r\n", (d, i, cols) => {
+				calls.push([i, cols.length]);
+				return i === 0 ? null : d;
+			});
+			expect(calls).toEqual([
+				[0, 3],
+				[1, 3]
+			]);
+			expect(rows.map((d) => d.areanm)).toEqual(["Leeds"]);
+		});
 	});
 });
 
