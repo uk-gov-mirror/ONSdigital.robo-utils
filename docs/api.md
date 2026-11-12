@@ -155,6 +155,14 @@ An `Array` of rows (usually [MagicObjects](#magicobject)) with extra methods for
 
 A `MagicArray` detects which columns hold each row's code, name and parent code from its first row (see [getCodeKey](#getcodekey-getnamekey-getparentkey)), and builds a `lookup` object of rows keyed by both code and name, which [get](#magicarrayget) uses. These are available as `codeKey`, `nameKey`, `parentKey` and `lookup`, and can be set to override them. The lookup is rebuilt when the number of rows changes.
 
+`columns` has the column names, like the array returned by [csvParse](#csvparse). `MagicArray.from()` copies them from the array it's given (unless it's given a `mapFn`), and methods that return rows keep them, including `.filter()` and `.slice()`. Otherwise, they're the keys of the first row. Like the other properties, `columns` can be set, and isn't included in `Object.keys()` or JSON.
+
+```js
+data.columns; // ["areacd", "areanm", "parentcd", "pop_2011", "pop_2021", "pc_degree"]
+places.columns; // the same, as places is filtered from data
+MagicArray.from([{ areacd: "E1", value: 5 }]).columns; // ["areacd", "value"]
+```
+
 Methods that return several rows return a new `MagicArray`, so they can be chained:
 
 ```js

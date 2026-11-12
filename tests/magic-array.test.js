@@ -80,6 +80,72 @@ describe("MagicArray.get() and lookup", () => {
 	});
 });
 
+describe("MagicArray.columns", () => {
+	const csv = "2019,areacd,areanm\n5,E1,Hull\n7,E2,Leeds";
+	const parsed = csvParse(csv);
+	const arr = MagicArray.from(parsed);
+
+	test("copied from a csvParse() array, in its order", () => {
+		expect(arr.columns).toEqual(["2019", "areacd", "areanm"]);
+		expect(arr.columns).not.toBe(parsed.columns);
+
+		// Object.keys() would put number-like names first
+		const reordered = MagicArray.from(csvParse("areacd,2019\nE1,5")).filter(() => true);
+		expect(Object.keys(reordered[0])).toEqual(["2019", "areacd"]);
+		expect(reordered.columns).toEqual(["areacd", "2019"]);
+	});
+
+	test("kept by methods and built-in methods that return rows", () => {
+		const parsed = csvParse("areacd,areanm,v,2019\nE1,Hull,5,1\nE2,Leeds,7,2\nE3,York,,3");
+		const arr = MagicArray.from(parsed);
+		const columns = ["areacd", "areanm", "v", "2019"];
+		for (const result of [
+			arr.filter(() => true),
+			arr.slice(1),
+			arr.concat([]),
+			MagicArray.from(arr),
+			arr.sortBy("v"),
+			arr.filterBy("areanm", "Hull"),
+			arr.top("v", 2),
+			arr.between("v", 1, 2),
+			arr.trim(1),
+			arr.flip(),
+			arr.add(arr[0]),
+			arr.remove(arr[0])
+		])
+			expect(result.columns).toEqual(columns);
+		expect(places.columns.slice(0, 3)).toEqual(["areacd", "areanm", "parentcd"]);
+	});
+
+	test("otherwise the keys of the first row", () => {
+		const rows = [
+			{ a: 1, b: 2 },
+			{ a: 3, c: 4 }
+		];
+		expect(MagicArray.from(rows).columns).toEqual(["a", "b"]);
+		expect(new MagicArray(...rows).columns).toEqual(["a", "b"]);
+		expect(arr.map((d) => ({ x: d.areanm })).columns).toEqual(["x"]);
+		expect(MagicArray.from(arr, (d) => ({ x: d.areanm })).columns).toEqual(["x"]);
+		expect(new MagicArray().columns).toEqual([]);
+		expect(MagicArray.from([1, 2]).columns).toEqual([]);
+	});
+
+	test("can be set, and isn't cleared by refreshProps()", () => {
+		const copy = MagicArray.from(arr);
+		copy.columns = ["areanm"];
+		copy.refreshProps();
+		expect(copy.columns).toEqual(["areanm"]);
+		expect(arr.columns).toEqual(["2019", "areacd", "areanm"]);
+		copy.columns = null;
+		expect(copy.columns).toEqual(Object.keys(copy[0]));
+	});
+
+	test("is not enumerable", () => {
+		expect(Object.keys(arr)).toEqual(["0", "1"]);
+		expect(JSON.stringify(arr.trim(1))).not.toContain("columns");
+	});
+});
+
 describe("MagicArray.top() / bottom() / remove()", () => {
 	test("top two places by population plus Rutland", () => {
 		expect([...places.top("population_2011", 2, places.get("Rutland"))]).toEqual([

@@ -18,6 +18,15 @@ import sortClass, { MISSING } from "./sort-class.js";
 const state = new WeakMap();
 const getState = (arr) => state.get(arr) ?? state.set(arr, {}).get(arr);
 
+// Column names, as on arrays from csvParse(). Kept apart from the detected keys, as refreshProps()
+// doesn't clear them, and copied to arrays from .filter(), .slice() and .concat()
+const columnState = new WeakMap();
+const keepColumns = (from, to) => {
+	const columns = columnState.get(from);
+	if (columns) columnState.set(to, [...columns]);
+	return to;
+};
+
 // Rows that can be ranked by a column: those whose value has the column's leading type (see
 // sort-class.js). Usually the numbers, leaving out missing values and text like "NA". If the
 // column only has text, the text rows.
@@ -70,7 +79,31 @@ export default class MagicArray extends Array {
 		for (let i = 0; i < array.length; i++) {
 			result[i] = array[i];
 		}
+		// Keep the column names of a csvParse() array or MagicArray (unless mapFn changes the rows)
+		const columns =
+			iterable instanceof MagicArray ? columnState.get(iterable) : iterable?.columns;
+		if (!mapFn && Array.isArray(columns)) columnState.set(result, [...columns]);
 		return result;
+	}
+	// Column names: those of the array it was made from, else the keys of the first row
+	get columns() {
+		const first = this[0];
+		return (
+			columnState.get(this) ?? (first && typeof first === "object" ? Object.keys(first) : [])
+		);
+	}
+	set columns(columns) {
+		if (columns == null) columnState.delete(this);
+		else columnState.set(this, columns);
+	}
+	filter(...args) {
+		return keepColumns(this, super.filter(...args));
+	}
+	slice(...args) {
+		return keepColumns(this, super.slice(...args));
+	}
+	concat(...args) {
+		return keepColumns(this, super.concat(...args));
 	}
 	get codeKey() {
 		return getState(this).codeKey ?? getProps(this[0]).codeKey;

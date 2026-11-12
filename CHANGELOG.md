@@ -13,6 +13,7 @@ Changes that affect templates or code using this library. Functions are document
 
 ### New
 
+- `MagicArray`s have `columns`, like `csvParse()` arrays. `MagicArray.from(csvParse(csv)).columns` keeps the CSV's column names and order, including after `.filter()`, `.slice()` and methods like `sortBy()` and `top()`. An array made from rows without `columns` uses the keys of its first row.
 - `top()` and `bottom()` have a `ties` option (`places.top(key, 3, null, true)`) that also includes rows tied with the last one. With `ties`, the result is always an array.
 
 ## 0.6.2
