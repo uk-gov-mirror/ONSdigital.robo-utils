@@ -1,9 +1,9 @@
-import { csvParse as csvP } from "d3-dsv";
 import { formatLocale } from "d3-format";
 import { roundTo } from "round-to";
 import * as articles from "articles";
 import pluralize from "pluralize-esm";
 import converter from "./number-to-words.js";
+import parseRaw from "./parse-raw.js";
 import MagicNumber from "./magic-number.js";
 import MagicObject from "./magic-object.js";
 import MagicArray from "./magic-array.js";
@@ -14,9 +14,6 @@ const f = formatLocale({
 	grouping: [3],
 	currency: ["£", ""]
 }).format;
-
-// Strip invisible byte-order mark common in CSV files
-const stripBOM = (str) => (str.charCodeAt(0) === 0xfeff ? str.slice(1) : str);
 
 // Adapted from d3.autoType to inject special robo-utils "magic" types
 export function autoType(object) {
@@ -279,18 +276,12 @@ export function toData(arr, props, mode = null) {
 }
 
 // Modifed d3.csvParse to strip byte order mark (BOM), remove blank rows from the end of the file
-// (eg. ",,," lines left by spreadsheet software) and apply robo-utils autoType by default.
-// Blank rows elsewhere are kept.
+// (with a warning) and apply robo-utils autoType by default. Blank rows elsewhere are kept.
 export function csvParse(str, row = autoType) {
-	const raw = csvP(stripBOM(str));
-	let blank = 0;
-	while (raw.length && Object.values(raw[raw.length - 1]).every((v) => !v.trim())) {
-		raw.pop();
-		blank++;
-	}
-	if (blank)
+	const { raw, removed } = parseRaw(str);
+	if (removed)
 		console.warn(
-			`csvParse: removed ${blank} blank row${blank > 1 ? "s" : ""} from the end of the data`
+			`csvParse: removed ${removed} blank row${removed > 1 ? "s" : ""} from the end of the data`
 		);
 	if (!row) return raw;
 	const rows = [];

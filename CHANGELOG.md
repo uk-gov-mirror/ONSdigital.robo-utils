@@ -2,12 +2,21 @@
 
 Changes that affect templates or code using this library. Functions are documented in the [API reference](docs/api.md).
 
-## 0.6.1 (unreleased)
+## 0.6.2 (unreleased)
+
+### Changes
+
+- **`csvParse()` removes blank rows from the end of the data**, with a console warning, instead of returning them as rows of empty cells (`null` with the default `autoType`). Blank rows elsewhere in the file are kept.
+
+### New
+
+- `validateCSV(str)` checks a CSV string for blank rows, rows with no code, duplicate codes and columns with mixed types, and returns a report object. It runs the same checks as the `check-data.js` script in robo-article, robo-embed and robo-scrolly.
+
+## 0.6.1
 
 ### Changes
 
 - **Code and name columns are detected in a slightly different order.** `getCodeKey()` and `getNameKey()` (also used by `MagicArray`, `getName()` and `getCode()`) now look for columns ending `code` and `name` (eg. `lad_name`), and only use `areacd` as the name column if there's no column ending `name` or `nm`. Previously `{ areacd, lad21nm }` used `areacd` as the name.
-- **`csvParse()` removes blank rows from the end of the data**, with a console warning, instead of returning them as rows of empty cells (`null` with the default `autoType`). Blank rows elsewhere in the file are kept.
 
 ## 0.6.0
 
