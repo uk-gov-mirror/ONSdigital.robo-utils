@@ -637,11 +637,58 @@ describe("ascending() / descending()", () => {
 		[1, 2, -1, 1],
 		[2, 1, 1, -1],
 		[1, 1, 0, 0],
-		[null, 1, NaN, NaN],
-		[1, undefined, NaN, NaN]
+		// Missing values come last in both directions, and are equal to each other
+		[null, 1, 1, 1],
+		[1, undefined, -1, -1],
+		[NaN, 1, 1, 1],
+		["", "a", 1, 1],
+		[null, undefined, 0, 0],
+		// Text comes after numbers in both directions, and before missing values
+		["NA", 1, 1, 1],
+		[1, "NA", -1, -1],
+		["NA", null, -1, -1],
+		["a", "b", -1, 1]
 	])("(%s, %s)", (a, b, asc, desc) => {
 		expect(robo.ascending(a, b)).toBe(asc);
 		expect(robo.descending(a, b)).toBe(desc);
+	});
+
+	test("sort missing values and text after numbers, keeping the order of numbers", () => {
+		const values = [5, null, 3, "NA", n(9), undefined, n(NaN), 1, "", 7];
+		const show = (arr) => arr.map((v) => (v instanceof MagicNumber ? +v : v));
+		expect(show([...values].sort(robo.ascending))).toEqual([
+			1,
+			3,
+			5,
+			7,
+			9,
+			"NA",
+			null,
+			NaN,
+			"",
+			undefined // Array.sort() always puts undefined at the end
+		]);
+		expect(show([...values].sort(robo.descending))).toEqual([
+			9,
+			7,
+			5,
+			3,
+			1,
+			"NA",
+			null,
+			NaN,
+			"",
+			undefined
+		]);
+	});
+
+	test("sort dates", () => {
+		const dates = [new Date(2021, 0), null, new Date(2020, 0)];
+		expect(dates.sort(robo.ascending).map((d) => d?.getFullYear() ?? null)).toEqual([
+			2020,
+			2021,
+			null
+		]);
 	});
 });
 

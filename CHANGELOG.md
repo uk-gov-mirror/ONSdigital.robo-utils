@@ -2,7 +2,20 @@
 
 Changes that affect templates or code using this library. Functions are documented in the [API reference](docs/api.md).
 
-## 0.6.2 (unreleased)
+## 0.6.3 (unreleased)
+
+### Changes
+
+- **Sorting, `top()`, `bottom()`, `between()` and `getRank()` handle missing values and text consistently.** Data with no missing values gives the same results as before.
+    - `ascending` and `descending` (and `sortBy()`, `.ascending()` and `.descending()`) put numbers first, then text (eg. `"NA"`), then missing values (`null`, `NaN` and empty cells), in either order. Previously, any missing value in a column could leave the whole column in the wrong order. `ascending(null, 1)` is now `1` (it was `NaN`).
+    - `top()`, `bottom()` and `between()` leave out rows with missing values, and text in a column of numbers. Previously, they could return these rows, and some of the top or bottom rows could be missing from the results.
+    - `getRank()` returns `null` for a row with a missing value or text. Previously, text like `"NA"` was ranked 1 and a missing value was ranked last. Other rows' ranks are unchanged.
+
+### New
+
+- `top()` and `bottom()` have a `ties` option (`places.top(key, 3, null, true)`) that also includes rows tied with the last one. With `ties`, the result is always an array.
+
+## 0.6.2
 
 ### Changes
 

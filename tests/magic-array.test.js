@@ -4,6 +4,11 @@ import MagicNumber from "../src/magic-number.js";
 import { csvParse } from "../src/functions.js";
 import { places, names } from "./setup.js";
 
+// Values with missing cells, text ("NA") and ties: 9 (E, H), 7, 5, 3, 1, then NA and two nulls
+const messy = MagicArray.from(
+	csvParse("areacd,areanm,v\nA,A,5\nB,B,\nC,C,3\nD,D,NA\nE,E,9\nF,F,\nG,G,1\nH,H,9\nI,I,7")
+);
+
 describe("MagicArray.get() and lookup", () => {
 	const leeds = places.get("Leeds");
 
@@ -97,6 +102,48 @@ describe("MagicArray.top() / bottom() / remove()", () => {
 			...places.bottom("population_2011", 3).remove(places.get("Isles of Scilly"))
 		]).toEqual([places.get("West Somerset"), places.get("City of London")]);
 	});
+
+	test("leave out missing values and text", () => {
+		expect(names(messy.top("v", 3))).toEqual(["E", "H", "I"]);
+		expect(names(messy.bottom("v", 3))).toEqual(["A", "C", "G"]);
+		expect(messy.bottom("v").areanm).toBe("G");
+		expect(names(messy.top("v", 20))).toEqual(["E", "H", "I", "A", "C", "G"]);
+	});
+
+	test("added rows with missing values go at the end", () => {
+		expect(names(messy.top("v", 2, messy.get("B")))).toEqual(["E", "H", "B"]);
+		expect(names(messy.bottom("v", 1, messy.get("D")))).toEqual(["G", "D"]);
+	});
+
+	test("ties = true includes rows tied with the last one, and always returns an array", () => {
+		expect(messy.top("v").areanm).toBe("E");
+		expect(names(messy.top("v", 1, null, true))).toEqual(["E", "H"]);
+		expect(names(messy.top("v", 2, null, true))).toEqual(["E", "H"]);
+		expect(names(messy.top("v", 3, null, true))).toEqual(["E", "H", "I"]);
+		expect(names(messy.bottom("v", 1, null, true))).toEqual(["G"]);
+		expect(names(messy.bottom("v", 5, null, true))).toEqual(["E", "H", "I", "A", "C", "G"]);
+
+		const tied = MagicArray.from(
+			csvParse("areacd,areanm,v\nE1,A,40\nE2,B,30\nE3,C,30\nE4,D,10")
+		);
+		expect(names(tied.top("v", 2, null, true))).toEqual(["A", "B", "C"]);
+		expect(names(tied.bottom("v", 2, null, true))).toEqual(["B", "C", "D"]);
+		expect(names(tied.top("v", 2, tied.get("D"), true))).toEqual(["A", "B", "C", "D"]);
+	});
+
+	test("ties = true agrees with getRank()", () => {
+		for (const n of [1, 2, 3, 4]) {
+			const top = messy.top("v", n, null, true);
+			const nth = messy.descending("v")[n - 1];
+			expect(top.every((d) => messy.getRank(d, "v") <= messy.getRank(nth, "v"))).toBe(true);
+		}
+	});
+
+	test("columns with only missing values or only text", () => {
+		const text = MagicArray.from(csvParse("areacd,areanm,v,w\nE1,A,b,\nE2,B,c,\nE3,C,a,"));
+		expect(text.top("v").areanm).toBe("B");
+		expect(text.top("w", 2)).toEqual([]);
+	});
 });
 
 describe("MagicArray.filterBy()", () => {
@@ -130,6 +177,13 @@ describe("MagicArray.sortBy() / ascending() / descending() / flip()", () => {
 		const arr = places.trim(3);
 		expect(names(arr.flip())).toEqual(names(arr).reverse());
 		expect(names(arr)).toEqual(["Adur", "Allerdale", "Amber Valley"]);
+	});
+
+	test("missing values and text go last in either order", () => {
+		const show = (arr) => arr.map((d) => (d.v === null ? null : d.v.valueOf()));
+		expect(show(messy.descending("v"))).toEqual([9, 9, 7, 5, 3, 1, "NA", null, null]);
+		expect(show(messy.ascending("v"))).toEqual([1, 3, 5, 7, 9, 9, "NA", null, null]);
+		expect(names(messy.descending("v").trim(2))).toEqual(["E", "H"]); // ties keep their order
 	});
 });
 
@@ -186,6 +240,24 @@ describe("MagicArray.getRank()", () => {
 			{ areacd: "E3", v: 20 }
 		]);
 		expect(plain.map((d) => +plain.getRank(d, "v"))).toEqual([3, 1, 1]);
+	});
+
+	test("is null for missing values and text, which don't affect other ranks", () => {
+		expect(messy.getRank(messy.get("B"), "v")).toBeNull();
+		expect(messy.getRank(messy.get("D"), "v")).toBeNull();
+		expect(messy.map((d) => messy.getRank(d, "v")?.valueOf() ?? null)).toEqual([
+			4,
+			null,
+			5,
+			null,
+			1,
+			null,
+			6,
+			1,
+			3
+		]);
+		expect(+messy.getRank(messy.get("G"), "v", "ascending")).toBe(1);
+		expect(messy.getRank(messy.get("H"), "v").ties).toEqual(["E"]);
 	});
 });
 
@@ -369,5 +441,12 @@ describe("MagicArray.between()", () => {
 		expect(() => places.between(key, 1, 5, "invalid")).toThrow(
 			"Invalid mode: invalid. Use 'rank', 'value', or 'around'."
 		);
+	});
+
+	test("leaves out missing values and text", () => {
+		expect(names(messy.between("v", 1, 3))).toEqual(["E", "H", "I"]);
+		expect(names(messy.between("v", 5, 9, "rank"))).toEqual(["C", "G"]);
+		expect(names(messy.between("v", 0, 4, "value"))).toEqual(["C", "G"]);
+		expect(names(messy.between("v", messy.get("G"), 2, "around"))).toEqual(["A", "C", "G"]);
 	});
 });

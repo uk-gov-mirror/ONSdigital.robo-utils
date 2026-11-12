@@ -4,6 +4,7 @@ import * as articles from "articles";
 import pluralize from "pluralize-esm";
 import converter from "./number-to-words.js";
 import parseRaw from "./parse-raw.js";
+import sortClass, { MISSING } from "./sort-class.js";
 import MagicNumber from "./magic-number.js";
 import MagicObject from "./magic-object.js";
 import MagicArray from "./magic-array.js";
@@ -299,12 +300,21 @@ export async function getData(url) {
 	return MagicArray.from(data);
 }
 
+// Values first, then text, then missing values (see sort-class.js), in either direction
+function compare(a, b, sign) {
+	const a_class = sortClass(a),
+		b_class = sortClass(b);
+	if (a_class !== b_class) return a_class < b_class ? -1 : 1;
+	if (a_class === MISSING) return 0;
+	return a < b ? -sign : a > b ? sign : 0;
+}
+
 export function ascending(a, b) {
-	return a == null || b == null ? NaN : a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+	return compare(a, b, 1);
 }
 
 export function descending(a, b) {
-	return a == null || b == null ? NaN : b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
+	return compare(a, b, -1);
 }
 
 export function addToArray(arr, items) {

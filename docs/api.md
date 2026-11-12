@@ -181,7 +181,7 @@ data.get("E06000001").areanm; // "Hartlepool"
 places.sortBy(key, order = "ascending")
 ```
 
-Sorts by a column, `"ascending"` or `"descending"`. Returns a new array. `places.ascending(key)` and `places.descending(key)` are shortcuts.
+Sorts by a column, `"ascending"` or `"descending"`. Returns a new array. `places.ascending(key)` and `places.descending(key)` are shortcuts. Rows with missing values, and text in a column of numbers (eg. `"NA"`), go at the end in either order (see [ascending, descending](#ascending-descending)). Rows with equal values keep their order.
 
 ```js
 places.sortBy("pop_2021", "descending").toList("areanm");
@@ -204,24 +204,33 @@ places.filterBy("pop_2021", 92338).toList("areanm"); // "Hartlepool"
 ### MagicArray.top
 
 ```js
-places.top(key, n = 1, add = null)
+places.top(key, n = 1, add = null, ties = false)
 ```
 
 Returns the `n` rows with the highest values. With `n = 1`, returns the row itself rather than an array. `add` is a row (or array of rows) to include as well, for example the selected place; the result is then re-sorted.
+
+Rows with missing values, and text in a column of numbers (eg. `"NA"`), are left out, as in [getRank](#magicarraygetrank). If there are fewer than `n` other rows, all of them are returned. Rows from `add` are always included, at the end if their value is missing.
+
+With `ties = true`, rows with the same value as the `n`th row are included too, so there can be more than `n` rows. The result is then always an array, even for one row. To describe a tie, use [getRank](#magicarraygetrank) (`isTied` and `ties`).
 
 ```js
 places.top("pop_2021").areanm; // "Stockton-on-Tees"
 places.top("pop_2021", 2).toList("areanm"); // "Stockton-on-Tees and Middlesbrough"
 places.top("pop_2021", 2, place).toList("areanm"); // "Stockton-on-Tees, Middlesbrough and Hartlepool"
+
+// Darlington and the North East both have 0.27
+data.top("pc_degree", 3).toList("areanm"); // "England, Stockton-on-Tees and Darlington"
+data.top("pc_degree", 3, null, true).toList("areanm");
+// "England, Stockton-on-Tees, Darlington and North East"
 ```
 
 ### MagicArray.bottom
 
 ```js
-places.bottom(key, n = 1, add = null)
+places.bottom(key, n = 1, add = null, ties = false)
 ```
 
-Like [top](#magicarraytop), for the lowest values. The result is still sorted highest first.
+Like [top](#magicarraytop), for the lowest values, including leaving out missing values and the `ties` option. The result is still sorted highest first.
 
 ```js
 places.bottom("pop_2021", 2).toList("areanm"); // "Darlington and Hartlepool"
@@ -233,7 +242,7 @@ places.bottom("pop_2021", 2).toList("areanm"); // "Darlington and Hartlepool"
 places.between(key, start, end, mode = "rank", order = "descending", add = null, excludeTarget = false)
 ```
 
-Returns rows from a range, sorted by `key` in `order`. Always returns an array, even for a single row.
+Returns rows from a range, sorted by `key` in `order`. Always returns an array, even for a single row. Rows with missing values, and text in a column of numbers, are left out (unless they're in `add`), as in [getRank](#magicarraygetrank).
 
 | `mode`     | `start`     | `end`              | Returns                                        |
 | ---------- | ----------- | ------------------ | ---------------------------------------------- |
@@ -263,7 +272,7 @@ places.between("pop_2021", place, 1, "around", "descending", null, true).toList(
 places.getRank(row, key, order = "descending")
 ```
 
-Returns a row's rank (1 = highest, or lowest with `order = "ascending"`). Tied values share a rank: two rows tied for first are both ranked 1, and the next is ranked 3. Rows with no value are left out.
+Returns a row's rank (1 = highest, or lowest with `order = "ascending"`). Tied values share a rank: two rows tied for first are both ranked 1, and the next is ranked 3. Rows with missing values, and text in a column of numbers (eg. `"NA"`), are left out, and their own rank is `null`, so `if rank` checks that a row has one.
 
 The rank is a [MagicNumber](#magicnumber), so it can be used anywhere a number can, with these extras:
 
@@ -963,9 +972,10 @@ ascending(a, b)
 descending(a, b)
 ```
 
-Comparison functions for `Array.sort()`. Missing values (`null` or `undefined`) are not ordered.
+Comparison functions for `Array.sort()`. Numbers (including [MagicNumbers](#magicnumber)), dates and booleans come first, then text, then missing values (`null`, `undefined`, `NaN` and `""`). These groups are in the same order whichever way the values are sorted, so text like `"NA"` in a column of numbers always goes after the numbers. Text is sorted by character code, as with `<`, so capital letters come before lower-case ones.
 
 ```js
 [3, 1, 2].sort(ascending); // [1, 2, 3]
 [3, 1, 2].sort(descending); // [3, 2, 1]
+[3, null, 1, "NA", 2].sort(descending); // [3, 2, 1, "NA", null]
 ```
