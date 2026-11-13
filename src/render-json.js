@@ -107,7 +107,7 @@ export default function renderJSON(template, place, places, lookup, pug = window
 	} catch (err) {
 		error = err.toString();
 		console.warn(
-			`PUG error. No HTML generated for ${place ? functions.getName(place, "the") : `no area selected`}`,
+			`PUG error. No HTML generated for ${place ? functions.getName(place, "the") || functions.getCode(place) : "no area selected"}`,
 			err
 		);
 	}

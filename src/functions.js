@@ -108,6 +108,9 @@ export function toList(array, key, separator = [", ", " and "]) {
 
 // If mode !== "default", function only returns prefix
 export function formatName(name, context = null, mode = "default") {
+	// A missing name gives an empty string, and a number (eg. 2019, as parsed from a CSV) is text
+	if (name == null) return "";
+	name = String(name);
 	if (name === "East") name = "East of England";
 	name = name.replace("&", "and").replace(", City of", "").replace(", County of", "");
 	let prefix = "";

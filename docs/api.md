@@ -796,7 +796,7 @@ Formats a place name for use in a sentence. It adds "the" where needed (regions,
 - `"in"`: with "in" (or "on" for islands).
 - `"its"`: possessive.
 
-Any `mode` other than `"default"` returns only the prefix.
+Any `mode` other than `"default"` returns only the prefix. A missing name (`null` or `undefined`) gives `""`, and a number is used as text (`formatName(2019, "in")` is `"in 2019"`).
 
 ```js
 formatName("North West"); // "North West"

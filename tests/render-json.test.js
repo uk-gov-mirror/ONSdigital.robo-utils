@@ -252,4 +252,11 @@ describe("errors", () => {
 		expect(result.error).toMatch(/Cannot read properties of undefined \(reading 'foo'\)/);
 		expect(warn).toHaveBeenCalledOnce();
 	});
+
+	test("Pug errors are returned for a place with no name, which is named by its code", () => {
+		const noName = MagicArray.from(csvParse("areacd,areanm,value\nE06000099,,5"))[0];
+		const result = render("section\n  p= nonexistent.foo", noName);
+		expect(result.error).toMatch(/reading 'foo'/);
+		expect(warn.mock.calls[0][0]).toBe("PUG error. No HTML generated for E06000099");
+	});
 });

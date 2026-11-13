@@ -87,6 +87,14 @@ describe("formatName()", () => {
 		expect(robo.formatName(name, context)).toBe(expected);
 	});
 
+	test("a missing name is an empty string, and a number is text", () => {
+		expect(robo.formatName(null)).toBe("");
+		expect(robo.formatName(undefined, "in")).toBe("");
+		expect(robo.formatName(null, "in", "prefix")).toBe("");
+		expect(robo.formatName(n(2019), "in")).toBe("in 2019");
+		expect(robo.getName({ areacd: "E1", areanm: null }, "the")).toBe("");
+	});
+
 	test("mode other than default returns only the prefix", () => {
 		expect(robo.formatName("North West", "in", "prefix")).toBe("in the");
 		expect(robo.formatName("London", "in", "prefix")).toBe("in");

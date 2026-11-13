@@ -2,7 +2,13 @@
 
 Changes that affect templates or code using this library. Functions are documented in the [API reference](docs/api.md).
 
-## 0.6.4 (unreleased)
+## 0.6.5 (unreleased)
+
+### Changes
+
+- **`formatName()` and `getName()` no longer throw for a missing name.** A missing name (`null` or `undefined`) gives `""`, and a number (eg. a name parsed from a CSV as `2019`) is used as text. Previously both threw an error. This also fixes `renderJSON()` throwing, instead of returning the template's error, when a template failed for a row with no name: its warning message now uses the area's code.
+
+## 0.6.4
 
 ### New
 
