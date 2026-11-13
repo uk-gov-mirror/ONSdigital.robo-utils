@@ -2,7 +2,14 @@
 
 Changes that affect templates or code using this library. Functions are documented in the [API reference](docs/api.md).
 
-## 0.6.3 (unreleased)
+## 0.6.4 (unreleased)
+
+### New
+
+- `validateCSV()` has a `noName` check ("Rows with no name") for rows with a code but no name. Its report now has 5 checks, so the `check-data.js` scripts print "Rows with no name" too.
+- `validateCSV(str, { codeKey, nameKey })` chooses the code and name columns, instead of detecting them. If either isn't a column, the report has an `error`.
+
+## 0.6.3
 
 ### Changes
 

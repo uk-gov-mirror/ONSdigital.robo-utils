@@ -102,7 +102,7 @@ const data = await getData("https://example.com/data.csv");
 ### validateCSV
 
 ```js
-validateCSV(str)
+validateCSV(str, { codeKey = null, nameKey = null } = {})
 ```
 
 Checks a CSV string for problems that would break a template, parsing it as [csvParse](#csvparse) does. It runs these checks:
@@ -111,10 +111,11 @@ Checks a CSV string for problems that would break a template, parsing it as [csv
 | ---------------- | ----------------------------------------------------------------------------------------------------------- |
 | `blankRows`      | Blank rows. Blank rows at the end of the file aren't reported, as `csvParse` removes them (see `removedBlankRows`) |
 | `noCode`         | Rows with data but no value in the code column                                                              |
+| `noName`         | Rows with a code but no value in the name column (skipped if there's no name column)                        |
 | `duplicateCodes` | Codes used in more than one row (ignoring surrounding spaces)                                               |
 | `mixedTypes`     | Columns with more than one type of value (eg. numbers and `"NA"`). Empty cells are allowed in any column    |
 
-It returns a report object, and doesn't log anything. Row numbers are spreadsheet rows, where the header is row 1. Each problem has a `message` with the same text as the `check-data.js` script in robo-article, robo-embed and robo-scrolly. `codeKey` and `nameKey` are detected with [getCodeKey and getNameKey](#getcodekey-getnamekey-getparentkey) (`nameKey` is `null` if there's no name column). `problems` is the number of checks that failed.
+It returns a report object, and doesn't log anything. Row numbers are spreadsheet rows, where the header is row 1. Each problem has a `message` with the same text as the `check-data.js` script in robo-article, robo-embed and robo-scrolly. `codeKey` and `nameKey` are the code and name columns: the ones given as options, or else detected with [getCodeKey and getNameKey](#getcodekey-getnamekey-getparentkey). `nameKey` is `null` if there's no name column, including when it's the same as `codeKey`. `problems` is the number of checks that failed.
 
 ```js
 validateCSV("areacd,areanm,value\nE1,Hull,5\nE1,Leeds,NA\n,,\n,York,7\n,,\n");
@@ -129,6 +130,7 @@ validateCSV("areacd,areanm,value\nE1,Hull,5\nE1,Leeds,NA\n,,\n,York,7\n,,\n");
 //       problems: [{ row: 4, message: "row 4" }] },
 //     { id: "noCode", title: "Rows with no code", passed: false,
 //       problems: [{ row: 5, name: "York", message: "row 5 (York)" }] },
+//     { id: "noName", title: "Rows with no name", passed: true, problems: [] },
 //     { id: "duplicateCodes", title: "Duplicate codes", passed: false,
 //       problems: [{ code: "E1", rows: [{ row: 2, name: "Hull" }, { row: 3, name: "Leeds" }],
 //                    message: "E1: row 2 (Hull), row 3 (Leeds)" }] },
@@ -147,7 +149,15 @@ validateCSV("areacd,areanm,value\nE1,Hull,5\nE1,Leeds,NA\n,,\n,York,7\n,,\n");
 
 In `mixedTypes`, `types` is sorted with the most common type first, and every other type has up to 3 `examples` with their original text. `hint` suggests renaming the column to end `_array` if one of the types is `array`, and is `null` otherwise. Types are `number`, `string`, `boolean`, `date` and `array`.
 
-If the CSV has no rows, `error` is `"No rows found"`, `checks` is empty and `passed` is `false`.
+`noName` problems are `{ row, code, message }`, eg. `{ row: 6, code: "E2", message: "row 6 (E2)" }`.
+
+To choose the columns, for example when the user picks them:
+
+```js
+validateCSV(csv, { codeKey: "id", nameKey: "label" });
+```
+
+If the CSV has no rows, `error` is `"No rows found"`. If `codeKey` or `nameKey` isn't one of the columns, `error` is eg. `"Column not found: id"`. In both cases `checks` is empty and `passed` is `false`.
 
 ## MagicArray
 

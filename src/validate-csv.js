@@ -20,8 +20,9 @@ function getType(val) {
 const check = (id, title, problems) => ({ id, title, passed: problems.length === 0, problems });
 
 // Check a CSV string for problems that would break a robo-journalism template, as parsed by
-// csvParse() with autoType. Returns a report object (see docs/api.md).
-export default function validateCSV(str) {
+// csvParse() with autoType. codeKey and nameKey choose the code and name columns (by default,
+// they're detected). Returns a report object (see docs/api.md).
+export default function validateCSV(str, { codeKey = null, nameKey = null } = {}) {
 	const { raw: text, removed } = parseRaw(str);
 	const data = text.map((d) => autoType({ ...d }));
 	const columns = text.columns;
@@ -42,9 +43,14 @@ export default function validateCSV(str) {
 		return report;
 	}
 
-	// 1. Likely code and name columns
-	const codeKey = getCodeKey(data[0]);
-	const nameKey = getNameKey(data[0]);
+	// 1. Code and name columns (given, or likely ones)
+	const missing = [codeKey, nameKey].filter((key) => key != null && !columns.includes(key));
+	if (missing.length) {
+		report.error = `Column${missing.length > 1 ? "s" : ""} not found: ${missing.join(", ")}`;
+		return report;
+	}
+	codeKey ??= getCodeKey(data[0]);
+	nameKey ??= getNameKey(data[0]);
 	const hasName = nameKey !== codeKey; // getNameKey falls back to the code column
 	report.codeKey = codeKey;
 	report.nameKey = hasName ? nameKey : null;
@@ -68,7 +74,18 @@ export default function validateCSV(str) {
 		.map((i) => ({ ...rowRef(i), message: describeRow(i) }));
 	report.checks.push(check("noCode", "Rows with no code", noCode));
 
-	// 4. Duplicate codes
+	// 4. Rows with a code but no name (only if there's a name column)
+	const noName = hasName
+		? indexes
+				.filter((i) => !isEmpty(data[i][codeKey]) && isEmpty(data[i][nameKey]))
+				.map((i) => {
+					const code = text[i][codeKey].trim();
+					return { row: rowNum(i), code, message: `row ${rowNum(i)} (${code})` };
+				})
+		: [];
+	report.checks.push(check("noName", "Rows with no name", noName));
+
+	// 5. Duplicate codes
 	const rowsByCode = new Map();
 	for (const i of indexes) {
 		if (isEmpty(data[i][codeKey])) continue;
@@ -84,7 +101,7 @@ export default function validateCSV(str) {
 		}));
 	report.checks.push(check("duplicateCodes", "Duplicate codes", duplicates));
 
-	// 5. Columns with mixed types (empty cells are valid in a column of any type)
+	// 6. Columns with mixed types (empty cells are valid in a column of any type)
 	const mixed = [];
 	for (const col of columns) {
 		const byType = {};

@@ -21,6 +21,7 @@ describe("validateCSV()", () => {
 		expect(report.checks.map((c) => c.id)).toEqual([
 			"blankRows",
 			"noCode",
+			"noName",
 			"duplicateCodes",
 			"mixedTypes"
 		]);
@@ -60,6 +61,43 @@ describe("validateCSV()", () => {
 			{ row: 3, name: "Leeds", message: "row 3 (Leeds)" },
 			{ row: 4, name: null, message: "row 4" }
 		]);
+	});
+
+	test("reports rows with a code but no name", () => {
+		const report = validateCSV(csv(header, "E1,Hull,5", "E2,,7", ",,3"));
+		expect(problems(report, "noName")).toEqual([{ row: 3, code: "E2", message: "row 3 (E2)" }]);
+		expect(problems(report, "noCode")).toHaveLength(1); // row 4 is reported as having no code
+	});
+
+	test("doesn't check names when there's no name column", () => {
+		const report = validateCSV(csv("areacd,value", "E1,5", "E2,"));
+		expect(problems(report, "noName")).toEqual([]);
+		expect(report.passed).toBe(true);
+	});
+
+	test("codeKey and nameKey choose the columns", () => {
+		const report = validateCSV(csv("areacd,areanm,id,label", "E1,Hull,1,A", "E1,Leeds,2,"), {
+			codeKey: "id",
+			nameKey: "label"
+		});
+		expect([report.codeKey, report.nameKey]).toEqual(["id", "label"]);
+		expect(problems(report, "duplicateCodes")).toEqual([]);
+		expect(problems(report, "noName")).toEqual([{ row: 3, code: "2", message: "row 3 (2)" }]);
+
+		// Only one of them, or the same column for both (no name column)
+		expect(validateCSV(csv(header, "E1,Hull,5"), { nameKey: "value" }).codeKey).toBe("areacd");
+		expect(
+			validateCSV(csv(header, "E1,Hull,5"), { codeKey: "areacd", nameKey: "areacd" }).nameKey
+		).toBeNull();
+	});
+
+	test("returns an error for columns that aren't in the CSV", () => {
+		const report = validateCSV(csv(header, "E1,Hull,5"), { codeKey: "id", nameKey: "label" });
+		expect(report).toMatchObject({ passed: false, error: "Columns not found: id, label" });
+		expect(report.checks).toEqual([]);
+		expect(validateCSV(csv(header, "E1,Hull,5"), { codeKey: "id" }).error).toBe(
+			"Column not found: id"
+		);
 	});
 
 	test("reports duplicate codes, ignoring surrounding spaces", () => {
